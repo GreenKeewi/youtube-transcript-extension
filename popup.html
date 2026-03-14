@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Presets</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div>
+          <p class="eyebrow">YouTube Transcript to AI</p>
+          <h1>Pre-prompts</h1>
+        </div>
+        <p class="subtitle">
+          Add, remove, or tweak the prompts shown on YouTube.
+        </p>
+      </header>
+
+      <section class="prompt-section">
+        <div id="promptList" class="prompt-list"></div>
+        <button id="addPromptBtn" class="secondary-btn" type="button">
+          + Add prompt
+        </button>
+      </section>
+
+      <footer class="popup-actions">
+        <button id="resetBtn" class="ghost-btn" type="button">
+          Reset defaults
+        </button>
+        <button id="saveBtn" class="primary-btn" type="button">
+          Save changes
+        </button>
+      </footer>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <template id="promptTemplate">
+      <article class="prompt-card">
+        <div class="prompt-card-header">
+          <span class="prompt-badge">Prompt</span>
+          <button class="remove-btn" type="button">Remove</button>
+        </div>
+
+        <label class="field-group">
+          <span class="field-label">Label</span>
+          <input
+            class="text-input prompt-label"
+            type="text"
+            maxlength="24"
+            placeholder="Summarize"
+          />
+        </label>
+
+        <label class="field-group">
+          <span class="field-label">Instruction</span>
+          <textarea
+            class="text-area prompt-text"
+            rows="3"
+            placeholder="Summarize this transcript."
+          ></textarea>
+        </label>
+      </article>
+    </template>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,8 +1,8 @@
 const AI_PLATFORM_URLS = {
   chatgpt: "https://chat.openai.com/",
-  claude: "https://claude.ai/",
+  claude: "https://claude.ai/new",
   gemini: "https://gemini.google.com/",
-  deepseek: "https://chat.deepseek.com/"
+  deepseek: "https://chat.deepseek.com/",
 };
 
 const pendingTranscriptByTab = new Map();
@@ -25,18 +25,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (chrome.runtime.lastError || !tab?.id) {
         sendResponse({
           success: false,
-          error: chrome.runtime.lastError?.message || "Could not open AI tab."
+          error: chrome.runtime.lastError?.message || "Could not open AI tab.",
         });
         return;
       }
 
-        pendingTranscriptByTab.set(tab.id, {
-          transcript,
-          prompt: prompt || transcript,
-          mode: mode || "summarize",
-          platform,
-          createdAt: Date.now()
-        });
+      pendingTranscriptByTab.set(tab.id, {
+        transcript,
+        prompt: prompt || transcript,
+        mode: mode || "summarize",
+        platform,
+        createdAt: Date.now(),
+      });
 
       sendResponse({ success: true, tabId: tab.id });
     });
@@ -53,7 +53,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     const payload = pendingTranscriptByTab.get(senderTabId);
     if (!payload) {
-      sendResponse({ success: false, error: "No pending transcript for this tab." });
+      sendResponse({
+        success: false,
+        error: "No pending transcript for this tab.",
+      });
       return;
     }
 

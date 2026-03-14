@@ -6,6 +6,7 @@
     "chat.openai.com",
     "chatgpt.com",
     "claude.ai",
+    "claude.com",
     "gemini.google.com",
     "chat.deepseek.com",
   ].includes(window.location.hostname);
@@ -20,7 +21,25 @@
 
   function initYouTubePanel() {
     const PANEL_ID = "ytai-panel";
-    const MODE_STORAGE_KEY = "ytai-mode";
+    const PROMPTS_STORAGE_KEY = "ytai-prompts";
+    const SELECTED_PROMPT_STORAGE_KEY = "ytai-selected-prompt";
+    const DEFAULT_PROMPTS = [
+      {
+        id: "summarize",
+        label: "Summarize",
+        prompt: "Summarize this transcript.",
+      },
+      {
+        id: "explain",
+        label: "Explain",
+        prompt: "Explain this transcript simply for a beginner.",
+      },
+      {
+        id: "notes",
+        label: "Notes",
+        prompt: "Convert this transcript into clean study notes.",
+      },
+    ];
     const aiOptions = {
       chatgpt: {
         name: "ChatGPT",
@@ -32,7 +51,7 @@
         name: "Claude",
         logoUrl: "https://claude.ai/favicon.ico",
         fallback: "CL",
-        url: "https://claude.ai/",
+        url: "https://claude.ai/new",
       },
       gemini: {
         name: "Gemini",
@@ -47,32 +66,61 @@
         url: "https://chat.deepseek.com/",
       },
     };
-    const modeOptions = {
-      summarize: "Summarize this transcript.",
-      explain: "Explain this transcript simply for a beginner.",
-      notes: "Convert this transcript into clean study notes.",
-    };
-
     let panelRoot = null;
     let statusElement = null;
     let observeUrlInterval = null;
     let currentVideoId = getVideoId();
     let cachedTranscript = "";
-    let selectedMode = loadModePreference();
+    let promptOptions = cloneDefaultPrompts();
+    let selectedPromptId = promptOptions[0]?.id || "summarize";
 
     const pageObserver = new MutationObserver(() => {
       ensurePanelMounted();
     });
 
-    start();
+    const storageChangeHandler = (changes, areaName) => {
+      if (areaName !== "local") {
+        return;
+      }
 
-    function start() {
+      if (
+        !changes[PROMPTS_STORAGE_KEY] &&
+        !changes[SELECTED_PROMPT_STORAGE_KEY]
+      ) {
+        return;
+      }
+
+      if (changes[PROMPTS_STORAGE_KEY]) {
+        promptOptions = sanitizePromptList(
+          changes[PROMPTS_STORAGE_KEY].newValue,
+        );
+      }
+
+      const requestedPromptId = changes[SELECTED_PROMPT_STORAGE_KEY]
+        ? changes[SELECTED_PROMPT_STORAGE_KEY].newValue
+        : selectedPromptId;
+
+      selectedPromptId = syncSelectedPrompt(requestedPromptId, promptOptions);
+
+      if (panelRoot) {
+        renderPromptButtons(panelRoot.querySelector(".ytai-mode-menu"));
+      }
+    };
+
+    void start();
+
+    async function start() {
+      await loadPromptPreferences();
       ensurePanelMounted();
 
       pageObserver.observe(document.documentElement, {
         childList: true,
         subtree: true,
       });
+
+      if (globalThis.chrome?.storage?.onChanged) {
+        globalThis.chrome.storage.onChanged.addListener(storageChangeHandler);
+      }
 
       observeUrlInterval = window.setInterval(() => {
         if (!window.location.pathname.startsWith("/watch")) {
@@ -97,6 +145,11 @@
       pageObserver.disconnect();
       if (observeUrlInterval) {
         window.clearInterval(observeUrlInterval);
+      }
+      if (globalThis.chrome?.storage?.onChanged) {
+        globalThis.chrome.storage.onChanged.removeListener(
+          storageChangeHandler,
+        );
       }
     }
 
@@ -137,11 +190,7 @@
 
       wrapper.innerHTML = `
           <div class="ytai-top-row">
-            <div class="ytai-mode-menu" role="tablist" aria-label="Prompt mode">
-              <button type="button" class="ytai-mode-btn" data-mode="summarize" role="tab">Summarize</button>
-              <button type="button" class="ytai-mode-btn" data-mode="explain" role="tab">Explain</button>
-              <button type="button" class="ytai-mode-btn" data-mode="notes" role="tab">Notes</button>
-            </div>
+            <div class="ytai-mode-menu" role="tablist" aria-label="Prompt mode"></div>
           </div>
           <div class="ytai-icon-row"></div>
           <p class="ytai-status ytai-hidden" aria-live="polite"></p>
@@ -149,31 +198,7 @@
 
       statusElement = wrapper.querySelector(".ytai-status");
       const iconRow = wrapper.querySelector(".ytai-icon-row");
-
-      const modeButtons = wrapper.querySelectorAll(".ytai-mode-btn");
-      modeButtons.forEach((button) => {
-        const mode = button.dataset.mode;
-        if (mode === selectedMode) {
-          button.classList.add("is-active");
-          button.setAttribute("aria-selected", "true");
-        } else {
-          button.setAttribute("aria-selected", "false");
-        }
-
-        button.addEventListener("click", () => {
-          if (!mode || !modeOptions[mode]) {
-            return;
-          }
-          selectedMode = mode;
-          saveModePreference(mode);
-          modeButtons.forEach((candidate) => {
-            const active = candidate === button;
-            candidate.classList.toggle("is-active", active);
-            candidate.setAttribute("aria-selected", active ? "true" : "false");
-          });
-          setStatus("", "success");
-        });
-      });
+      renderPromptButtons(wrapper.querySelector(".ytai-mode-menu"));
 
       Object.entries(aiOptions).forEach(([platform, details]) => {
         const button = document.createElement("button");
@@ -223,7 +248,7 @@
           return;
         }
 
-        const prompt = composePrompt(transcript, selectedMode);
+        const prompt = composePrompt(transcript, selectedPromptId);
         const copied = await copyToClipboard(prompt);
         const runtime = globalThis.chrome?.runtime;
         if (!runtime?.sendMessage) {
@@ -242,7 +267,7 @@
             action: "openAiWithTranscript",
             transcript,
             prompt,
-            mode: selectedMode,
+            mode: selectedPromptId,
             platform,
           },
           async (response) => {
@@ -1097,36 +1122,164 @@
       statusElement.className = `ytai-status ytai-${type}`;
     }
 
-    function composePrompt(transcript, mode) {
-      const instruction = modeOptions[mode] || modeOptions.summarize;
+    function renderPromptButtons(container) {
+      if (!(container instanceof HTMLElement)) {
+        return;
+      }
+
+      container.innerHTML = "";
+
+      promptOptions.forEach((promptOption) => {
+        const isActive = promptOption.id === selectedPromptId;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "ytai-mode-btn";
+        button.dataset.mode = promptOption.id;
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+        button.classList.toggle("is-active", isActive);
+        button.textContent = promptOption.label;
+        button.addEventListener("click", () => {
+          selectedPromptId = promptOption.id;
+          void saveSelectedPromptPreference(promptOption.id);
+          renderPromptButtons(container);
+          setStatus("", "success");
+        });
+        container.appendChild(button);
+      });
+    }
+
+    function composePrompt(transcript, promptId) {
+      const instruction =
+        getPromptById(promptId)?.prompt || DEFAULT_PROMPTS[0].prompt;
       return `${instruction}\n\nTranscript:\n${transcript}`;
     }
 
-    function loadModePreference() {
+    async function loadPromptPreferences() {
       try {
-        const stored = window.localStorage.getItem(MODE_STORAGE_KEY);
-        if (stored && modeOptions[stored]) {
-          return stored;
+        const storedValues = await storageGet([
+          PROMPTS_STORAGE_KEY,
+          SELECTED_PROMPT_STORAGE_KEY,
+        ]);
+        promptOptions = sanitizePromptList(storedValues[PROMPTS_STORAGE_KEY]);
+        selectedPromptId = syncSelectedPrompt(
+          storedValues[SELECTED_PROMPT_STORAGE_KEY],
+          promptOptions,
+        );
+      } catch (error) {
+        console.debug("Could not read prompt preferences", error);
+      }
+    }
+
+    async function saveSelectedPromptPreference(promptId) {
+      try {
+        await storageSet({ [SELECTED_PROMPT_STORAGE_KEY]: promptId });
+      } catch (error) {
+        console.debug("Could not save selected prompt", error);
+      }
+    }
+
+    function getPromptById(promptId) {
+      return promptOptions.find((promptOption) => promptOption.id === promptId);
+    }
+
+    function syncSelectedPrompt(promptId, prompts) {
+      if (prompts.some((promptOption) => promptOption.id === promptId)) {
+        return promptId;
+      }
+      return prompts[0]?.id || DEFAULT_PROMPTS[0].id;
+    }
+
+    function sanitizePromptList(rawValue) {
+      const source =
+        Array.isArray(rawValue) && rawValue.length
+          ? rawValue
+          : cloneDefaultPrompts();
+      const seenIds = new Set();
+      const sanitized = [];
+
+      source.forEach((item, index) => {
+        const label = typeof item?.label === "string" ? item.label.trim() : "";
+        const prompt =
+          typeof item?.prompt === "string" ? item.prompt.trim() : "";
+        if (!label || !prompt) {
+          return;
         }
-      } catch (error) {
-        console.debug("Could not read mode preference", error);
-      }
-      return "summarize";
+
+        const baseId =
+          typeof item?.id === "string" && item.id.trim()
+            ? item.id.trim()
+            : buildPromptId(label, index + 1);
+
+        let nextId = baseId;
+        let suffix = 2;
+        while (seenIds.has(nextId)) {
+          nextId = `${baseId}-${suffix}`;
+          suffix += 1;
+        }
+
+        seenIds.add(nextId);
+        sanitized.push({
+          id: nextId,
+          label,
+          prompt,
+        });
+      });
+
+      return sanitized.length ? sanitized : cloneDefaultPrompts();
     }
 
-    function saveModePreference(mode) {
-      try {
-        window.localStorage.setItem(MODE_STORAGE_KEY, mode);
-      } catch (error) {
-        console.debug("Could not save mode preference", error);
-      }
+    function cloneDefaultPrompts() {
+      return DEFAULT_PROMPTS.map((promptOption) => ({ ...promptOption }));
     }
 
-    function capitalize(value) {
-      if (!value) {
-        return "";
-      }
-      return value.charAt(0).toUpperCase() + value.slice(1);
+    function buildPromptId(label, fallbackIndex) {
+      const slug = (label || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      return slug || `prompt-${fallbackIndex}`;
+    }
+
+    function storageGet(keys) {
+      return new Promise((resolve, reject) => {
+        const storage = globalThis.chrome?.storage?.local;
+        if (!storage) {
+          resolve({});
+          return;
+        }
+
+        storage.get(keys, (result) => {
+          const runtimeError = globalThis.chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message));
+            return;
+          }
+
+          resolve(result || {});
+        });
+      });
+    }
+
+    function storageSet(value) {
+      return new Promise((resolve, reject) => {
+        const storage = globalThis.chrome?.storage?.local;
+        if (!storage) {
+          resolve();
+          return;
+        }
+
+        storage.set(value, () => {
+          const runtimeError = globalThis.chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message));
+            return;
+          }
+
+          resolve();
+        });
+      });
     }
 
     function getVideoId() {

@@ -1,0 +1,169 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0f1117;
+  color: #f5f7fb;
+}
+
+.popup-shell {
+  width: 360px;
+  min-height: 420px;
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+.popup-header {
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8ab4f8;
+}
+
+.popup-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #b7c0cc;
+}
+
+.prompt-section {
+  display: grid;
+  gap: 12px;
+}
+
+.prompt-list {
+  display: grid;
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.prompt-card {
+  border: 1px solid #2c3440;
+  border-radius: 14px;
+  background: #171b22;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.prompt-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.prompt-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fb8ff;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 12px;
+  color: #cfd6df;
+}
+
+.text-input,
+.text-area {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #333c49;
+  border-radius: 10px;
+  background: #0f1319;
+  color: #f5f7fb;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.text-input:focus,
+.text-area:focus {
+  outline: 2px solid rgba(138, 180, 248, 0.35);
+  border-color: #8ab4f8;
+}
+
+.text-area {
+  resize: vertical;
+  min-height: 76px;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.primary-btn,
+.secondary-btn,
+.ghost-btn,
+.remove-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #5b8cff, #7a5cff);
+  color: #fff;
+}
+
+.secondary-btn {
+  background: #1e2631;
+  color: #d9e2f1;
+}
+
+.ghost-btn,
+.remove-btn {
+  background: transparent;
+  color: #ffb4b4;
+  border: 1px solid #4a2830;
+}
+
+.ghost-btn {
+  color: #c8d3df;
+  border-color: #36404d;
+}
+
+.status {
+  min-height: 18px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #9aa7b5;
+}
+
+.status.success {
+  color: #81c995;
+}
+
+.status.error {
+  color: #f28b82;
+}
