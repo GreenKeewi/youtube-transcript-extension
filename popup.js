@@ -26,11 +26,13 @@ const state = {
 const elements = {
   promptList: document.getElementById("promptList"),
   addPromptBtn: document.getElementById("addPromptBtn"),
-  resetBtn: document.getElementById("resetBtn"),
-  saveBtn: document.getElementById("saveBtn"),
   status: document.getElementById("status"),
   promptTemplate: document.getElementById("promptTemplate"),
 };
+
+let statusTimeoutId = null;
+let autoSaveTimeoutId = null;
+const MIN_TEXTAREA_HEIGHT = 72;
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
@@ -55,18 +57,10 @@ function attachEvents() {
       ".prompt-card:last-child .prompt-label",
     );
     latestLabel?.focus();
-    setStatus("New prompt added. Save when you're happy with it.", "success");
-  });
-
-  elements.resetBtn.addEventListener("click", () => {
-    state.prompts = cloneDefaultPrompts();
-    state.selectedPromptId = state.prompts[0].id;
-    renderPromptList();
-    setStatus("Defaults restored. Hit save to apply them.", "success");
-  });
-
-  elements.saveBtn.addEventListener("click", () => {
-    void savePrompts();
+    void savePrompts({
+      successMessage: "New prompt added and synced.",
+      showSavingState: false,
+    });
   });
 }
 
@@ -103,13 +97,17 @@ function renderPromptList() {
     card.dataset.id = promptItem.id;
     labelInput.value = promptItem.label;
     promptInput.value = promptItem.prompt;
+    autoGrowTextarea(promptInput);
 
     labelInput.addEventListener("input", (event) => {
       state.prompts[index].label = event.target.value;
+      scheduleAutoSave();
     });
 
     promptInput.addEventListener("input", (event) => {
       state.prompts[index].prompt = event.target.value;
+      autoGrowTextarea(event.target);
+      scheduleAutoSave();
     });
 
     removeBtn.addEventListener("click", () => {
@@ -126,14 +124,42 @@ function renderPromptList() {
         state.selectedPromptId = state.prompts[0]?.id || DEFAULT_PROMPTS[0].id;
       }
       renderPromptList();
-      setStatus("Prompt removed. Save to update the extension.", "success");
+      void savePrompts({
+        successMessage: "Prompt removed and synced.",
+        showSavingState: false,
+      });
     });
 
     elements.promptList.appendChild(fragment);
   });
 }
 
-async function savePrompts() {
+function scheduleAutoSave() {
+  if (autoSaveTimeoutId) {
+    window.clearTimeout(autoSaveTimeoutId);
+  }
+
+  autoSaveTimeoutId = window.setTimeout(() => {
+    autoSaveTimeoutId = null;
+    void savePrompts({
+      successMessage: "Changes saved automatically.",
+      showSavingState: false,
+    });
+  }, 350);
+}
+
+function autoGrowTextarea(textarea) {
+  if (!(textarea instanceof HTMLTextAreaElement)) {
+    return;
+  }
+
+  textarea.style.height = "auto";
+  textarea.style.height = `${Math.max(textarea.scrollHeight, MIN_TEXTAREA_HEIGHT)}px`;
+}
+
+async function savePrompts(options = {}) {
+  const { successMessage = "Prompt presets saved.", showSavingState = false } =
+    options;
   const sanitized = sanitizePromptList(state.prompts);
 
   if (!sanitized.length) {
@@ -153,12 +179,14 @@ async function savePrompts() {
   );
 
   try {
+    if (showSavingState) {
+      setStatus("Saving changes...", "success");
+    }
     await storageSet({
       [PROMPTS_STORAGE_KEY]: state.prompts,
       [SELECTED_PROMPT_STORAGE_KEY]: state.selectedPromptId,
     });
-    renderPromptList();
-    setStatus("Prompt presets saved.", "success");
+    setStatus(successMessage, "success");
   } catch (error) {
     console.error("Failed to save prompts", error);
     setStatus("Could not save prompts right now.", "error");
@@ -224,7 +252,18 @@ function buildPromptId(label, fallbackIndex) {
 
 function setStatus(message, type = "") {
   elements.status.textContent = message;
-  elements.status.className = type ? `status ${type}` : "status";
+  elements.status.className = type
+    ? `status ${type} visible`
+    : "status visible";
+
+  if (statusTimeoutId) {
+    window.clearTimeout(statusTimeoutId);
+  }
+
+  statusTimeoutId = window.setTimeout(() => {
+    elements.status.className = type ? `status ${type}` : "status";
+    statusTimeoutId = null;
+  }, 2800);
 }
 
 function storageGet(keys) {

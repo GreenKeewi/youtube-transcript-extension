@@ -3,62 +3,74 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prompt Presets</title>
+    <title>YouTube Prompt Manager</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main class="popup-shell">
       <header class="popup-header">
-        <div>
-          <p class="eyebrow">YouTube Transcript to AI</p>
-          <h1>Pre-prompts</h1>
-        </div>
-        <p class="subtitle">
-          Add, remove, or tweak the prompts shown on YouTube.
-        </p>
+        <h1>Pre-prompts</h1>
+        <p class="subtitle">Configure your AI assistance shortcuts</p>
       </header>
 
       <section class="prompt-section">
         <div id="promptList" class="prompt-list"></div>
-        <button id="addPromptBtn" class="secondary-btn" type="button">
-          + Add prompt
+        <button id="addPromptBtn" class="add-prompt-btn" type="button">
+          <span class="add-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M12 5V19" />
+              <path d="M5 12H19" />
+            </svg>
+          </span>
+          <span>Add prompt</span>
         </button>
       </section>
 
       <footer class="popup-actions">
-        <button id="resetBtn" class="ghost-btn" type="button">
-          Reset defaults
-        </button>
-        <button id="saveBtn" class="primary-btn" type="button">
-          Save changes
-        </button>
+        <p id="status" class="status" aria-live="polite"></p>
+        <p class="auto-save-note">Changes save automatically</p>
       </footer>
-
-      <p id="status" class="status" aria-live="polite"></p>
     </main>
 
     <template id="promptTemplate">
       <article class="prompt-card">
         <div class="prompt-card-header">
-          <span class="prompt-badge">Prompt</span>
-          <button class="remove-btn" type="button">Remove</button>
-        </div>
+          <label class="field-group prompt-label-group">
+            <span class="field-label">Label</span>
+            <input
+              class="text-input prompt-label"
+              type="text"
+              maxlength="24"
+              placeholder="Summarize"
+            />
+          </label>
 
-        <label class="field-group">
-          <span class="field-label">Label</span>
-          <input
-            class="text-input prompt-label"
-            type="text"
-            maxlength="24"
-            placeholder="Summarize"
-          />
-        </label>
+          <button class="remove-btn" type="button" aria-label="Remove prompt">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M3 6H21" />
+              <path
+                d="M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6"
+              />
+              <path
+                d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6"
+              />
+            </svg>
+          </button>
+        </div>
 
         <label class="field-group">
           <span class="field-label">Instruction</span>
           <textarea
             class="text-area prompt-text"
-            rows="3"
+            rows="2"
             placeholder="Summarize this transcript."
           ></textarea>
         </label>
