@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Transcript to AI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="title">Transcript</h1>
+      <button id="refreshBtn" class="refresh-btn" title="Refresh transcript">↻</button>
+    </header>
+
+    <div class="controls">
+      <select id="aiPlatform" class="ai-select">
+        <option value="">Select AI Platform</option>
+        <option value="chatgpt">ChatGPT</option>
+        <option value="claude">Claude</option>
+        <option value="gemini">Gemini</option>
+        <option value="deepseek">DeepSeek</option>
+      </select>
+    </div>
+
+    <textarea id="transcriptText" class="transcript-textarea" placeholder="Transcript will appear here..."></textarea>
+
+    <div class="button-group">
+      <button id="sendBtn" class="send-btn" disabled>Send to AI</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
